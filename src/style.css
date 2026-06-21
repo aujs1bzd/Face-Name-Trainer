@@ -116,7 +116,12 @@ textarea { min-height: 96px; resize: vertical; }
 .import input { display: none; }
 
 @media (max-width: 620px) {
-  header { position: static; padding: calc(11px + env(safe-area-inset-top)) 16px 10px; }
+  header {
+    position: static;
+    padding: calc(11px + env(safe-area-inset-top)) 16px 10px;
+    background: #fff;
+    backdrop-filter: none;
+  }
   h1 { margin: 0; text-align: center; font-size: 1.15rem; }
   h2 { font-size: 1.4rem; }
 
