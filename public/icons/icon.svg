@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Face Name Trainer">
+  <rect width="512" height="512" rx="112" fill="#2f6f5e"/>
+  <circle cx="256" cy="210" r="104" fill="#f5d2b8"/>
+  <path d="M153 203c4-76 47-122 106-122 62 0 102 45 103 123-30-25-53-58-62-81-24 42-78 72-147 80Z" fill="#23443a"/>
+  <circle cx="218" cy="218" r="10" fill="#263238"/>
+  <circle cx="294" cy="218" r="10" fill="#263238"/>
+  <path d="M222 268c21 22 47 22 68 0" fill="none" stroke="#9a5548" stroke-width="12" stroke-linecap="round"/>
+  <path d="M90 454c17-91 78-139 166-139s149 48 166 139" fill="#ffffff"/>
+  <path d="M201 328l55 58 55-58" fill="#d9eee7"/>
+  <path d="M247 385h18l13 69h-44Z" fill="#2f6f5e"/>
+</svg>

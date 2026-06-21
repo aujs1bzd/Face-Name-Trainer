@@ -70,15 +70,21 @@ export function calculateNextReview(stats: ReviewStats, correct: boolean, now = 
   };
 }
 
-export function pickNextPerson(people: Person[], now = new Date()): Person | null {
+export function pickNextPerson(people: Person[], random = Math.random): Person | null {
   if (!people.length) return null;
-  const due = people.filter((person) => new Date(person.stats.nextReviewAt) <= now);
-  const pool = due.length ? due : [...people].sort((a, b) => +new Date(a.stats.nextReviewAt) - +new Date(b.stats.nextReviewAt)).slice(0, 3);
-  const weighted = pool.flatMap((person) => Array(Math.max(1, person.stats.wrongAttempts + (new Date(person.stats.nextReviewAt) <= now ? 2 : 0))).fill(person));
-  return weighted[Math.floor(Math.random() * weighted.length)];
+  return people[Math.floor(random() * people.length)];
 }
 
-export function makeChoices(correct: Person, people: Person[]): Person[] {
-  const wrong = people.filter((p) => p.id !== correct.id).sort(() => Math.random() - 0.5).slice(0, 3);
-  return [correct, ...wrong].sort(() => Math.random() - 0.5);
+function shuffle<T>(items: T[], random: () => number): T[] {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+export function makeChoices(correct: Person, people: Person[], random = Math.random): Person[] {
+  const wrong = shuffle(people.filter((person) => person.id !== correct.id), random).slice(0, 3);
+  return shuffle([correct, ...wrong], random);
 }

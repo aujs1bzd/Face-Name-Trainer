@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { clearPeople, deletePerson, getPeople, importPeople, savePerson } from './db';
 import { calculateNextReview, createInitialStats, isCorrectAnswer, makeChoices, pickNextPerson } from './quiz';
 import type { Person, QuizMode } from './types';
@@ -23,6 +23,7 @@ export default function App() {
   const [answer, setAnswer] = useState('');
   const [result, setResult] = useState<boolean | null>(null);
   const [message, setMessage] = useState('');
+  const isAdvancing = useRef(false);
 
   const refresh = async () => setPeople(await getPeople());
   useEffect(() => { refresh(); }, []);
@@ -36,6 +37,7 @@ export default function App() {
   const startQuiz = (nextMode = mode) => {
     if (nextMode === 'multiple' && people.length < 4) { setMessage('4択モードには4人以上の登録が必要です。'); return; }
     const next = pickNextPerson(people);
+    isAdvancing.current = false;
     setMode(nextMode); setQuizPerson(next); setAnswer(''); setResult(null); setMessage(next ? '' : '人物を登録してください。');
     if (next && nextMode === 'multiple') setChoices(makeChoices(next, people));
     setPage('quiz');
@@ -47,13 +49,29 @@ export default function App() {
     await savePerson(updated); await refresh(); setQuizPerson(updated); setResult(ok);
   };
 
-  const nextQuestion = async () => { await refresh(); setTimeout(() => startQuiz(mode), 0); };
+  const nextQuestion = async () => {
+    if (isAdvancing.current) return;
+    isAdvancing.current = true;
+    await refresh();
+    setTimeout(() => startQuiz(mode), 0);
+  };
+
+  useEffect(() => {
+    if (page !== 'quiz' || result === null || !quizPerson) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' || event.repeat || event.isComposing) return;
+      event.preventDefault();
+      void nextQuestion();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [page, result, quizPerson]);
 
   return <div><header><h1>Face Name Trainer</h1><nav>{['home','form','list','quiz','settings'].map((p) => <button key={p} onClick={() => p === 'quiz' ? startQuiz(mode) : (setPage(p as Page), setEditing(null))}>{({home:'ホーム',form:'人物登録',list:'人物一覧',quiz:'クイズ',settings:'設定'} as Record<string,string>)[p]}</button>)}</nav></header><main>{message && <p className="notice">{message}</p>}
     {page === 'home' && <section><h2>ダッシュボード</h2><div className="cards"><b>登録人数<br />{people.length}</b><b>今日復習<br />{dashboard.due}</b><b>総回答数<br />{dashboard.total}</b><b>正答率<br />{dashboard.accuracy}%</b></div><h3>苦手な人物</h3>{dashboard.weak.map((p) => <article className="row" key={p.id}><img src={p.imageDataUrl} /><span>{p.displayName}（誤答 {p.stats.wrongAttempts} / 正答率 {rate(p)}%）</span></article>)}</section>}
     {page === 'form' && <PersonForm person={editing ?? blank()} onCancel={() => { setEditing(null); setPage('list'); }} onSave={async (p) => { await savePerson(p); await refresh(); setEditing(null); setPage('list'); }} />}
     {page === 'list' && <section><h2>人物一覧</h2><div className="filters"><input placeholder="名前検索" value={query} onChange={(e) => setQuery(e.target.value)} /><input placeholder="所属検索" value={teamQuery} onChange={(e) => setTeamQuery(e.target.value)} /></div>{people.filter((p) => `${p.displayName}${p.firstName}${p.lastName}${p.kana}`.includes(query) && p.team.includes(teamQuery)).map((p) => <article className="person" key={p.id}><img src={p.imageDataUrl} /><div><h3>{p.displayName}</h3><p>{p.kana} / {p.team}</p><p>正答率 {rate(p)}%・最終 {fmt(p.stats.lastReviewedAt)}・次回 {fmt(p.stats.nextReviewAt)}</p><button onClick={() => { setEditing(p); setPage('form'); }}>編集</button><button className="danger" onClick={async () => confirm('削除しますか？') && (await deletePerson(p.id), await refresh())}>削除</button></div></article>)}</section>}
-    {page === 'quiz' && <section className="quiz"><h2>この人の名前は？</h2><div className="mode"><button onClick={() => startQuiz('input')}>自由入力</button><button onClick={() => startQuiz('multiple')}>4択</button></div>{quizPerson && <><img className="face" src={quizPerson.imageDataUrl} />{result === null ? mode === 'input' ? <form onSubmit={(e) => { e.preventDefault(); submitAnswer(isCorrectAnswer(answer, quizPerson)); }}><input autoFocus value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="名前を入力" /><button>回答</button></form> : <div className="choices">{choices.map((c) => <button key={c.id} onClick={() => submitAnswer(c.id === quizPerson.id)}>{c.displayName}</button>)}</div> : <div className={result ? 'correct' : 'wrong'}><h3>{result ? '正解！' : '不正解'}</h3><p className="answer">正しい名前: {quizPerson.displayName}</p><p>{quizPerson.kana}</p><p>{quizPerson.team}</p><p>{quizPerson.memo}</p><button onClick={nextQuestion}>次へ</button></div>}</>}</section>}
+    {page === 'quiz' && <section className="quiz"><h2>この人の名前は？</h2><div className="mode"><button onClick={() => startQuiz('input')}>自由入力</button><button onClick={() => startQuiz('multiple')}>4択</button></div>{quizPerson && <><img className="face" src={quizPerson.imageDataUrl} />{result === null ? mode === 'input' ? <form onSubmit={(e) => { e.preventDefault(); submitAnswer(isCorrectAnswer(answer, quizPerson)); }}><input autoFocus value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="名前を入力" /><button>回答</button></form> : <div className="choices">{choices.map((c) => <button key={c.id} onClick={() => submitAnswer(c.id === quizPerson.id)}><ruby>{c.displayName}{c.kana && <><rp>（</rp><rt>{c.kana}</rt><rp>）</rp></>}</ruby></button>)}</div> : <div className={result ? 'correct' : 'wrong'}><h3>{result ? '正解！' : '不正解'}</h3><p className="answer">正しい名前: {quizPerson.displayName}</p><p>{quizPerson.kana}</p><p>{quizPerson.team}</p><p>{quizPerson.memo}</p><button onClick={nextQuestion}>次へ</button></div>}</>}</section>}
     {page === 'settings' && <Settings people={people} refresh={refresh} />}
   </main></div>;
 }
