@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateNextReview, createInitialStats, isCorrectAnswer, makeChoices, normalizeAnswer, pickNextPerson } from './quiz';
+import { calculateNextReview, createInitialStats, findPersonByAnswer, isCorrectAnswer, makeChoices, normalizeAnswer, pickNextPerson } from './quiz';
 import type { Person } from './types';
 
 const person: Person = { id:'1', firstName:'太郎', lastName:'佐藤', displayName:'佐藤 太郎', kana:'さとう たろう', team:'infra', memo:'', aliases:['佐藤さん','satou','サトウ'], imageDataUrl:'x', createdAt:'', updatedAt:'', stats:createInitialStats(new Date('2026-01-01T00:00:00Z')) };
@@ -17,6 +17,19 @@ describe('isCorrectAnswer', () => {
     expect(isCorrectAnswer('サトウ', person)).toBe(true);
     expect(isCorrectAnswer('satou', person)).toBe(true);
     expect(isCorrectAnswer('田中', person)).toBe(false);
+  });
+});
+
+describe('findPersonByAnswer', () => {
+  const other = { ...person, id: '2', firstName: '花子', lastName: '田中', displayName: '田中 花子', kana: 'たなか はなこ', aliases: ['たなかさん'] };
+
+  it('finds the registered person whose name was entered', () => {
+    expect(findPersonByAnswer('田中さん', [person, other])?.id).toBe('2');
+  });
+
+  it('returns null for unknown or ambiguous names', () => {
+    expect(findPersonByAnswer('山田', [person, other])).toBeNull();
+    expect(findPersonByAnswer('佐藤', [person, { ...other, lastName: '佐藤' }])).toBeNull();
   });
 });
 

@@ -25,6 +25,11 @@ export function isCorrectAnswer(input: string, person: Person): boolean {
   return acceptable.includes(normalizeAnswer(input));
 }
 
+export function findPersonByAnswer(input: string, people: Person[]): Person | null {
+  const matches = people.filter((person) => isCorrectAnswer(input, person));
+  return matches.length === 1 ? matches[0] : null;
+}
+
 export function createInitialStats(now = new Date()): ReviewStats {
   return {
     totalAttempts: 0,
